@@ -1,0 +1,61 @@
+=========================================
+  INDIAN STOCK ANALYZER - SETUP GUIDE
+=========================================
+
+PREREQUISITES:
+--------------
+1. Install Node.js from: https://nodejs.org (LTS version)
+2. Your API key is already configured in .env file
+
+HOW TO RUN:
+-----------
+1. Open Command Prompt or PowerShell
+
+2. Navigate to the project folder:
+   cd D:\public-apis-master\indian-stock-analyzer
+
+3. Install dependencies:
+   npm install
+
+4. Start the development server:
+   npm run dev
+
+5. Open your browser and go to:
+   http://localhost:3000
+
+TROUBLESHOOTING:
+---------------
+If "npm" is not recognized:
+- Restart your terminal after installing Node.js
+- Or use full path: C:\Program Files\nodejs\npm.cmd install
+
+If port 3000 is busy:
+- Edit vite.config.js and change port to 3001
+
+API KEYS CONFIGURED:
+--------------------
+✓ IndianAPI: Configured
+✓ Gemini AI: Configured
+
+FEATURES:
+---------
+Page 1 - Current Situation:
+  • Resizable candlestick chart
+  • Timeframe selection (1D to 5Y)
+  • Technical indicators (SMA, EMA, Volume)
+  • Watchlist with live updates
+  • Data window (OHLC)
+
+Page 2 - History & Analysis:
+  • Quarterly results timeline
+  • News, Geopolitics, CEO updates
+  • Bullish/Bearish analysis
+  • Source citations with links
+
+Page 3 - AI Chatbot:
+  • Ask about any stock
+  • Quarterly results analysis
+  • Market news & insights
+  • Source citations
+
+=========================================
