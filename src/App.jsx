@@ -6,13 +6,16 @@ import AIChatbot from './pages/AIChatbot'
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Layout />}>
-        <Route index element={<CurrentSituation />} />
-        <Route path="history" element={<HistoryAnalysis />} />
-        <Route path="chat" element={<AIChatbot />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<CurrentSituation />} />
+          <Route path="history" element={<HistoryAnalysis />} />
+          <Route path="chat" element={<AIChatbot />} />
+        </Route>
+      </Routes>
+      <div className="watermark">made by ishaan;></div>
+    </>
   )
 }
 

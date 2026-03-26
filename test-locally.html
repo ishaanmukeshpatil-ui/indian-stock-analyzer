@@ -670,6 +670,121 @@
     }
     
     // ============================================
+    // QUARTERLY CHART COMPONENT (Line Chart)
+    // ============================================
+    function QuarterlyChart({ data, year }) {
+      const chartRef = React.useRef(null);
+      const chartInstance = React.useRef(null);
+      
+      React.useEffect(() => {
+        if (!chartRef.current || !data || data.length === 0) return;
+        
+        // Clear previous chart
+        chartRef.current.innerHTML = '';
+        
+        const chart = LightweightCharts.createChart(chartRef.current, {
+          layout: { 
+            background: { color: '#000000' }, 
+            textColor: '#999999',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          },
+          grid: { 
+            vertLines: { color: 'rgba(255,255,255,0.03)' }, 
+            horzLines: { color: 'rgba(255,255,255,0.03)' } 
+          },
+          rightPriceScale: { 
+            borderColor: 'rgba(255,255,255,0.08)',
+            scaleMargins: { top: 0.1, bottom: 0.1 }
+          },
+          timeScale: { 
+            borderColor: 'rgba(255,255,255,0.08)',
+            timeVisible: false
+          },
+          crosshair: { mode: 0 },
+          width: chartRef.current.clientWidth,
+          height: 200,
+        });
+        
+        // Revenue line
+        const revenueSeries = chart.addLineSeries({
+          color: '#00ff88',
+          lineWidth: 2,
+          title: 'Revenue',
+        });
+        
+        // Profit line
+        const profitSeries = chart.addLineSeries({
+          color: '#00d4ff',
+          lineWidth: 2,
+          title: 'Profit',
+        });
+        
+        // Transform data for chart - parse revenue/profit strings to numbers
+        const revenueData = data.map((q, i) => ({
+          time: i + 1,
+          value: parseFloat(q.revenue.replace(/[^\d]/g, '')) / 1000
+        }));
+        
+        const profitData = data.map((q, i) => ({
+          time: i + 1,
+          value: parseFloat(q.profit.replace(/[^\d]/g, '')) / 1000
+        }));
+        
+        revenueSeries.setData(revenueData);
+        profitSeries.setData(profitData);
+        
+        chart.timeScale().fitContent();
+        
+        // Handle resize
+        const handleResize = () => {
+          if (chartRef.current) {
+            chart.applyOptions({ 
+              width: chartRef.current.clientWidth 
+            });
+          }
+        };
+        window.addEventListener('resize', handleResize);
+        
+        chartInstance.current = chart;
+        
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (chartInstance.current) {
+            chartInstance.current.remove();
+          }
+        };
+      }, [data, year]);
+      
+      return (
+        <div style={{ width: '100%' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '12px',
+            padding: '8px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Quarterly Performance {year}
+            </span>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '12px', height: '2px', background: '#00ff88' }}></span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Revenue (Cr)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '12px', height: '2px', background: '#00d4ff' }}></span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Profit (Cr)</span>
+              </div>
+            </div>
+          </div>
+          <div ref={chartRef} style={{ width: '100%', height: '200px' }}></div>
+        </div>
+      );
+    }
+    
+    // ============================================
     // HEADER COMPONENT
     // ============================================
     function Header({ selectedStock }) {
@@ -1273,16 +1388,7 @@
               </div>
               
               <div>
-                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase' }}>Key Findings</div>
-                <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--neon-blue)', borderRadius: '6px', padding: '16px' }}>
-                  <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-primary)' }}>
-                    Reliance Industries has demonstrated consistent revenue growth over the past five years, with CAGR of approximately 8.5%. The most significant development in {selectedYear} was the profitability turnaround of Jio Platforms, which contributed Rs.4,200 crore to the consolidated EBITDA. The O2C segment maintained stable margins despite crude oil volatility, while retail segment revenue grew 25% year-over-year driven by expansion into tier-2 cities and the success of JioMart's omnichannel strategy.
-                  </p>
-                  <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-secondary)', marginTop: '10px' }}>
-                    The company's debt-to-equity ratio improved from 0.85 to 0.72 over the year, reflecting strong cash generation from operations. However, capital expenditure remained elevated at Rs.1.2 lakh crore, primarily directed toward 5G network expansion and green energy infrastructure.
-                  </p>
-                  <SourceLink name="Company BSE Filings" url="https://bseindia.com" />
-                </div>
+                <QuarterlyChart data={quarterlyData} year={selectedYear} />
               </div>
             </div>
           </section>

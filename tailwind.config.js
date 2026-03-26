@@ -7,12 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        'bg-primary': '#0a0a0f',
-        'bg-secondary': '#0f1019',
-        'bg-tertiary': '#141420',
-        'bg-surface': '#1a1a2e',
-        'border-primary': '#1f1f35',
-        'border-accent': '#2a2a45',
+        'bg-primary': '#000000',
+        'bg-secondary': '#000000',
+        'bg-tertiary': '#050505',
+        'bg-surface': '#0a0a0a',
+        'border-primary': 'rgba(255, 255, 255, 0.08)',
+        'border-accent': 'rgba(255, 255, 255, 0.12)',
         'neon-green': '#00ff88',
         'neon-red': '#ff3366',
         'neon-blue': '#00d4ff',
@@ -20,8 +20,8 @@ export default {
         'neon-yellow': '#fbbf24',
         'neon-orange': '#f97316',
         'text-primary': '#ffffff',
-        'text-secondary': '#8b8ba3',
-        'text-muted': '#5a5a75',
+        'text-secondary': '#999999',
+        'text-muted': '#666666',
       },
       fontFamily: {
         'mono': ['JetBrains Mono', 'Fira Code', 'monospace'],
