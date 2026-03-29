@@ -22,17 +22,11 @@ cd /d "%~dp0"
 
 git init
 git add -A
-git commit -m "Indian Stock Analyzer - Complete project"
+git commit -m "Indian Stock Analyzer - Front page linked"
 git branch -M main
 
-echo.
-echo ========================================
-echo IMPORTANT: Enter your GitHub username:
-echo ========================================
-set /p username="Username: "
-
 git remote remove origin 2>nul
-git remote add origin https://github.com/%username%/indian-stock-analyzer.git
+git remote add origin https://github.com/ishaanmukeshpatil-ui/indian-stock-analyzer.git
 git push -u origin main
 
 echo.

@@ -14,7 +14,7 @@
   <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
   
   <!-- Google Fonts - Inter for headings -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Bitcount&display=swap" rel="stylesheet">
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -624,7 +624,8 @@
                   }}></span>
                 )}
                 <span>{title}</span>
-              </div>
+  </div>
+
               <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Click for details →</span>
             </div>
           </div>
@@ -1987,7 +1988,7 @@ OVERALL RISK RATING: MODERATE
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
                   <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--neon-green)', fontFamily: "'Inter', sans-serif" }}>
-                    Will This Stock Go Up?
+                    Will {selectedStock?.symbol || 'This Stock'} Go Up?
                   </h3>
                   <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '13px' }}>AI-Powered Analysis Based on Multiple Data Sources</p>
                 </div>
@@ -2378,12 +2379,34 @@ Disclaimer: This is AI-powered analysis for informational purposes only. Not fin
       );
     }
     
+    // Stock name lookup
+    const stockNames = {
+      'RELIANCE': 'Reliance Industries',
+      'TCS': 'Tata Consultancy Services',
+      'HDFCBANK': 'HDFC Bank',
+      'INFY': 'Infosys',
+      'ICICIBANK': 'ICICI Bank',
+      'HINDUNILVR': 'Hindustan Unilever',
+      'SBIN': 'State Bank of India',
+      'BHARTIARTL': 'Bharti Airtel',
+      'ITC': 'ITC Limited',
+      'KOTAKBANK': 'Kotak Mahindra Bank',
+      'LT': 'Larsen & Toubro',
+      'WIPRO': 'Wipro',
+      'AXISBANK': 'Axis Bank',
+      'MARUTI': 'Maruti Suzuki',
+      'ASIANPAINT': 'Asian Paints'
+    };
+    
     // ============================================
     // MAIN APP
     // ============================================
     function App() {
       const [currentPage, setCurrentPage] = useState('current');
-      const [selectedStock, setSelectedStock] = useState({ symbol: 'RELIANCE', name: 'Reliance Industries' });
+      const [selectedStock, setSelectedStock] = useState({ 
+        symbol: 'RELIANCE', 
+        name: 'Reliance Industries' 
+      });
       
       const renderPage = () => {
         switch (currentPage) {
@@ -2411,5 +2434,6 @@ Disclaimer: This is AI-powered analysis for informational purposes only. Not fin
     // Render
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
+
 </body>
 </html>
