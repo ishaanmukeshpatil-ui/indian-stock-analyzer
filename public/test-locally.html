@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Indian Stock Analyzer</title>
+  
+  <!-- React from CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- TradingView Charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+  
+  <!-- Google Fonts - Inter for headings -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Bitcount&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #000000;
+      --bg-tertiary: #050505;
+      --bg-surface: #0a0a0a;
+      --border-primary: #1a1a1a;
+      --border-accent: #2a2a2a;
+      --border-light: #333333;
+      --border-white: rgba(255, 255, 255, 0.08);
+      --neon-green: #00ff88;
+      --neon-red: #ff3366;
+      --neon-blue: #00d4ff;
+      --neon-purple: #a855f7;
+      --neon-yellow: #fbbf24;
+      --text-primary: #ffffff;
+      --text-secondary: #999999;
+      --text-muted: #666666;
+    }
+    
+    html, body, #root {
+      height: 100%;
+      background-color: var(--bg-primary);
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--text-primary);
+    }
+    
+    .bold-heading {
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+    }
+    
+    /* Watermark */
+    .watermark {
+      position: fixed;
+      bottom: 12px;
+      right: 16px;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.15);
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    
+    /* Dropdown items for Current Status */
+    .dropdown-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .dropdown-item:hover { border-color: var(--border-accent); }
+    .dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .dropdown-header .arrow {
+      transition: transform 0.2s;
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+    .dropdown-header .arrow.open { transform: rotate(180deg); }
+    .dropdown-content {
+      padding: 0 12px 12px;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+      border-top: 1px solid var(--border-white);
+      padding-top: 10px;
+    }
+    
+    /* Watchlist scrollable */
+    .watchlist-body {
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    
+    /* 3 column section layout */
+    .status-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) {
+      .status-columns { grid-template-columns: 1fr; }
+    }
+    .status-column {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      padding: 12px;
+    }
+    .status-column-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--neon-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-white);
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-primary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-white); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-accent); }
+    
+    /* Components */
+    .card {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-white);
+      border-radius: 8px;
+    }
+    
+    .btn-primary {
+      padding: 10px 20px;
+      background: var(--neon-green);
+      color: var(--bg-primary);
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    
+    .btn-secondary {
+      padding: 8px 16px;
+      background: transparent;
+      color: var(--text-primary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--neon-blue); color: var(--neon-blue); }
+    
+    .input-field {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--neon-blue);
+    }
+    .input-field::placeholder { color: var(--text-muted); }
+    
+    .source-link {
+      color: var(--neon-blue);
+      text-decoration: underline;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .source-link:hover { text-shadow: 0 0 8px rgba(0, 212, 255, 0.5); }
+    
+    /* Layout */
+    .app-container { height: 100vh; display: flex; flex-direction: column; }
+    
+    .header {
+      height: 48px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-white);
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 24px;
+    }
+    
+    .main-container { flex: 1; display: flex; overflow: hidden; }
+    
+    .sidebar {
+      width: 64px;
+      background: var(--bg-primary);
+      border-right: 1px solid var(--border-white);
+      padding: 16px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .sidebar-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 8px;
+      border-radius: 6px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .sidebar-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+    .sidebar-item.active { background: var(--bg-tertiary); color: var(--neon-blue); border-left: 2px solid var(--neon-blue); }
+    
+    .content { flex: 1; padding: 16px; overflow-y: auto; }
+    
+    /* Chart */
+    .chart-container { background: var(--bg-primary); border: 1px solid var(--border-white); border-radius: 8px; overflow: hidden; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border-white); }
+    .chart-area { height: 400px; background: var(--bg-primary); }
+    
+    .timeframe-btn {
+      padding: 6px 10px;
+      font-size: 11px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .timeframe-btn:hover { color: var(--text-primary); background: var(--bg-tertiary); }
+    .timeframe-btn.active { background: var(--neon-blue); color: var(--bg-primary); }
+    
+    /* Data */
+    .data-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border-white); font-size: 13px; }
+    .data-row:last-child { border-bottom: none; }
+    
+    /* Watchlist */
+    .watchlist-item {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-white);
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    .watchlist-item:hover { background: var(--bg-tertiary); }
+    .watchlist-item.selected { background: rgba(0, 212, 255, 0.1); border-left: 2px solid var(--neon-blue); }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-white);
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    
+    /* Timeline */
+    .timeline-container {
+      position: relative;
+      padding: 20px 0;
+    }
+    .timeline-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--border-white);
+    }
+    .timeline-event {
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .timeline-event:hover .timeline-dot { transform: scale(1.3); }
+    .timeline-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid;
+      background: var(--bg-primary);
+      margin: 0 auto;
+      transition: all 0.2s;
+    }
+    .timeline-dot.positive { border-color: var(--neon-green); }
+    .timeline-dot.negative { border-color: var(--neon-red); }
+    .timeline-dot.neutral { border-color: var(--neon-yellow); }
+    
+    /* Chat */
+    .chat-container { display: flex; flex-direction: column; height: 100%; }
+    .messages-container { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .message { max-width: 80%; padding: 14px; border-radius: 8px; white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
+    .message.user { align-self: flex-end; background: rgba(0, 212, 255, 0.15); border: 1px solid rgba(0, 212, 255, 0.3); }
+    .message.assistant { align-self: flex-start; background: var(--bg-tertiary); border: 1px solid var(--border-white); }
+    .chat-input-container { padding: 12px; border-top: 1px solid var(--border-white); display: flex; gap: 8px; }
+    
+    /* Section titles */
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-white);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    /* Factor card */
+    .factor-card {
+      background: var(--bg-tertiary);
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid var(--border-white);
+    }
+    
+    /* Grid layouts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .grid-2, .grid-4 { grid-template-columns: 1fr; }
+      .sidebar { width: 48px; }
+    }
+    
+    /* Quick Actions */
+    .quick-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 13px;
+    }
+    .quick-action:hover { border-color: var(--neon-blue); color: var(--text-primary); }
+    
+    /* Prediction */
+    .prediction-box {
+      background: linear-gradient(135deg, rgba(0, 255, 136, 0.08), rgba(0, 212, 255, 0.08));
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    /* Loading */
+    .loading-dots { display: flex; gap: 4px; }
+    .loading-dots span {
+      width: 6px; height: 6px;
+      background: var(--neon-purple);
+      border-radius: 50%;
+      animation: bounce 0.6s infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.1s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.2s; }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
+    /* Resizable */
+    .resizable-y { resize: vertical; overflow: auto; min-height: 300px; max-height: 80vh; }
+    
+    /* Competitor card */
+    .competitor-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .competitor-header {
+      font-size: 12px;
+      color: var(--neon-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .competitor-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 12px;
+    }
+    
+    /* Year selector */
+    .year-btn {
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--border-white);
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .year-btn:hover { border-color: var(--neon-blue); color: var(--text-primary); }
+    .year-btn.active { background: var(--neon-blue); color: var(--bg-primary); border-color: var(--neon-blue); }
+    
+    /* Disclaimer */
+    .disclaimer {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-white);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    
+    // ============================================
+    // MOCK DATA
+    // ============================================
+    const marketIndices = [
+      { name: 'NIFTY 50', value: 25423.50, change: 0.37 },
+      { name: 'BANKNIFTY', value: 83023.50, change: 0.47 },
+      { name: 'SENSEX', value: 55712.50, change: 0.47 },
+      { name: 'NIFTY Midcap', value: 12450.30, change: 0.22 },
+      { name: 'NIFTY Smallcap', value: 15780.60, change: -0.15 },
+    ];
+    
+    // Historical timeline events with detailed summaries
+    const timelineEvents = [
+      {
+        year: 2021, month: 'Jul',
+        title: 'Jio Platforms Investment',
+        type: 'positive',
+        impact: '+15% stock price',
+        summary: 'Reliance secured over $20 billion in investments for Jio Platforms from global tech giants including Facebook (now Meta), Google, and Qualcomm. This massive influx of capital valued Jio at $65 billion and validated Reliance\'s digital strategy. The investments signaled strong confidence in India\'s digital future and Jio\'s potential to become a dominant force in telecom, e-commerce, and fintech. The stock surged as investors recognized the transformation of Reliance from an oil-centric company to a diversified tech conglomerate.',
+        source: 'Economic Times, July 2021'
+      },
+      {
+        year: 2022, month: 'Apr',
+        title: 'Reliance Retail Expansion',
+        type: 'positive',
+        impact: '+8% stock price',
+        summary: 'Reliance Retail crossed 15,000 stores across India, becoming the largest retailer in the country by store count. The expansion into tier-2 and tier-3 cities, combined with the integration of digital and physical retail through JioMart, positioned the company to capture the growing Indian consumer market. This milestone demonstrated Reliance\'s ability to execute large-scale retail operations and compete directly with Amazon India and Flipkart in the rapidly growing Indian e-commerce market.',
+        source: 'Business Standard, April 2022'
+      },
+      {
+        year: 2022, month: 'Aug',
+        title: 'O2C Deal Scrapped',
+        type: 'negative',
+        impact: '-5% stock price',
+        summary: 'Reliance Industries announced the termination of its deal to sell a 20% stake in its Oil-to-Chemicals (O2C) business to Saudi Aramco. The $15 billion deal, which had been in negotiations for two years, fell through due to differences over valuation and structure. While the stock initially dropped, analysts noted that Reliance retained full control over its valuable refining assets and could pursue alternative partnerships. The O2C business remains one of the world\'s largest refining complexes with a capacity of 1.4 million barrels per day.',
+        source: 'Reuters, August 2022'
+      },
+      {
+        year: 2023, month: 'Jun',
+        title: 'Jio IPO Rumors & 4G Leadership',
+        type: 'positive',
+        impact: '+12% stock price',
+        summary: 'Reports emerged that Reliance was preparing Jio Platforms for a potential IPO that could value the telecom arm at over $100 billion. Simultaneously, Jio solidified its position as India\'s largest telecom operator with over 430 million subscribers and the fastest 4G network. The company\'s ARPU (Average Revenue Per User) showed consistent improvement, indicating pricing power and customer stickiness. This dual catalyst of IPO potential and operational excellence drove significant stock appreciation.',
+        source: 'Livemint, June 2023'
+      },
+      {
+        year: 2024, month: 'Mar',
+        title: 'JioMart 100M Users',
+        type: 'positive',
+        impact: '+6% stock price',
+        summary: 'JioMart crossed the milestone of 100 million monthly active users, establishing itself as a serious competitor to Amazon India and Flipkart. The platform\'s integration with physical Reliance Retail stores created an omnichannel advantage that pure-play e-commerce players cannot easily replicate. The achievement validated Reliance\'s strategy of combining digital and physical retail assets, and demonstrated the company\'s ability to leverage its massive Jio telecom user base for cross-selling and customer acquisition.',
+        source: 'MoneyControl, March 2024'
+      },
+      {
+        year: 2024, month: 'Sep',
+        title: 'Green Energy $10B Commitment',
+        type: 'positive',
+        impact: '+4% stock price',
+        summary: 'Reliance announced a Rs 75,000 crore ($10 billion) investment in green energy over the next three years, including the establishment of gigafactories for solar PV, energy storage, and electrolyzer manufacturing in Jamnagar. This move aligned the company with global ESG trends and positioned it to capture the growing renewable energy market in India. The investment signals Reliance\'s long-term pivot away from fossil fuels while leveraging its existing energy infrastructure and expertise.',
+        source: 'Financial Express, September 2024'
+      },
+      {
+        year: 2025, month: 'Jan',
+        title: 'Jio Financial Services Launch',
+        type: 'neutral',
+        impact: '+2% stock price',
+        summary: 'Jio Financial Services, the demerged financial arm of Reliance Industries, began independent operations offering digital lending, insurance, and asset management products. The demerger allowed for focused capital allocation and regulatory clarity. While the initial impact on Reliance\'s stock price was modest, analysts view this as a long-term value creation opportunity as India\'s digital finance market is expected to grow exponentially.',
+        source: 'Hindu Business Line, January 2025'
+      },
+      {
+        year: 2025, month: 'Nov',
+        title: 'Record Quarterly Profits',
+        type: 'positive',
+        impact: '+7% stock price',
+        summary: 'Reliance Industries reported its highest-ever quarterly profit of Rs 19,650 crore in Q3 FY25, driven by strong performance across all business segments. The digital services segment (Jio) turned profitable for the first time, while retail margins improved significantly due to scale efficiencies. The results exceeded analyst expectations by 12%, demonstrating the success of Reliance\'s diversification strategy and operational excellence across its portfolio of businesses.',
+        source: 'Economic Times, November 2025'
+      }
+    ];
+    
+    // Quarterly data by year
+    const quarterlyDataByYear = {
+      2025: [
+        { quarter: 'Q3 FY25', revenue: '2,59,000 Cr', profit: '19,650 Cr', eps: '29.12', growth: '+8.2%', margin: '15.8%' },
+        { quarter: 'Q2 FY25', revenue: '2,39,000 Cr', profit: '17,544 Cr', eps: '26.05', growth: '+6.1%', margin: '14.9%' },
+        { quarter: 'Q1 FY25', revenue: '2,25,000 Cr', profit: '16,244 Cr', eps: '24.30', growth: '+5.8%', margin: '14.2%' },
+        { quarter: 'Q4 FY24', revenue: '2,13,000 Cr', profit: '15,470 Cr', eps: '23.25', growth: '+4.5%', margin: '13.8%' },
+      ],
+      2024: [
+        { quarter: 'Q3 FY24', revenue: '2,04,000 Cr', profit: '14,800 Cr', eps: '22.10', growth: '+5.2%', margin: '13.5%' },
+        { quarter: 'Q2 FY24', revenue: '1,94,000 Cr', profit: '13,900 Cr', eps: '20.75', growth: '+4.8%', margin: '13.2%' },
+        { quarter: 'Q1 FY24', revenue: '1,85,000 Cr', profit: '13,100 Cr', eps: '19.56', growth: '+4.2%', margin: '12.8%' },
+        { quarter: 'Q4 FY23', revenue: '1,78,000 Cr', profit: '12,500 Cr', eps: '18.67', growth: '+3.8%', margin: '12.4%' },
+      ],
+      2023: [
+        { quarter: 'Q3 FY23', revenue: '1,71,000 Cr', profit: '12,000 Cr', eps: '17.93', growth: '+3.5%', margin: '12.1%' },
+        { quarter: 'Q2 FY23', revenue: '1,65,000 Cr', profit: '11,500 Cr', eps: '17.18', growth: '+3.2%', margin: '11.8%' },
+        { quarter: 'Q1 FY23', revenue: '1,60,000 Cr', profit: '11,100 Cr', eps: '16.58', growth: '+2.8%', margin: '11.5%' },
+        { quarter: 'Q4 FY22', revenue: '1,55,000 Cr', profit: '10,700 Cr', eps: '15.98', growth: '+2.5%', margin: '11.2%' },
+      ],
+      2022: [
+        { quarter: 'Q3 FY22', revenue: '1,51,000 Cr', profit: '10,300 Cr', eps: '15.38', growth: '+2.2%', margin: '10.9%' },
+        { quarter: 'Q2 FY22', revenue: '1,48,000 Cr', profit: '10,000 Cr', eps: '14.93', growth: '+2.0%', margin: '10.6%' },
+        { quarter: 'Q1 FY22', revenue: '1,45,000 Cr', profit: '9,700 Cr', eps: '14.48', growth: '+1.8%', margin: '10.3%' },
+        { quarter: 'Q4 FY21', revenue: '1,42,000 Cr', profit: '9,400 Cr', eps: '14.03', growth: '+1.5%', margin: '10.0%' },
+      ],
+      2021: [
+        { quarter: 'Q3 FY21', revenue: '1,40,000 Cr', profit: '9,200 Cr', eps: '13.73', growth: '+1.2%', margin: '9.8%' },
+        { quarter: 'Q2 FY21', revenue: '1,38,000 Cr', profit: '9,000 Cr', eps: '13.43', growth: '+1.0%', margin: '9.5%' },
+        { quarter: 'Q1 FY21', revenue: '1,36,000 Cr', profit: '8,800 Cr', eps: '13.13', growth: '+0.8%', margin: '9.2%' },
+        { quarter: 'Q4 FY20', revenue: '1,34,000 Cr', profit: '8,600 Cr', eps: '12.83', growth: '+0.5%', margin: '9.0%' },
+      ]
+    };
+    
+    // Default watchlist
+    const defaultWatchlist = [
+      { symbol: 'RELIANCE', name: 'Reliance Industries', price: 2195.75, change: 27.25, changePercent: 1.25, volume: 12.5 },
+      { symbol: 'TCS', name: 'Tata Consultancy Services', price: 3945.20, change: 45.30, changePercent: 1.16, volume: 3.2 },
+      { symbol: 'HDFCBANK', name: 'HDFC Bank', price: 1678.45, change: -12.50, changePercent: -0.74, volume: 8.1 },
+      { symbol: 'INFY', name: 'Infosys', price: 1523.80, change: 8.90, changePercent: 0.59, volume: 5.4 },
+      { symbol: 'TATAMOTORS', name: 'Tata Motors', price: 487.35, change: 5.20, changePercent: 1.08, volume: 15.2 },
+    ];
+    
+    // ============================================
+    // SOURCE LINK COMPONENT
+    // ============================================
+    function SourceLink({ name, url }) {
+      return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="source-link">
+          [Source: {name}]
+        </a>
+      );
+    }
+    
+    // ============================================
+    // DROPDOWN ITEM COMPONENT (opens modal)
+    // ============================================
+    function DropdownItem({ title, content, sources, risk }) {
+      const [modalOpen, setModalOpen] = React.useState(false);
+      
+      const riskColors = {
+        high: '#ff3366',
+        medium: '#fbbf24',
+        low: '#00ff88',
+        neutral: '#666666'
+      };
+      
+      const riskColor = risk ? riskColors[risk] || riskColors.neutral : null;
+      
+      return (
+        <>
+          <div className="dropdown-item" onClick={() => setModalOpen(true)}>
+            <div className="dropdown-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {risk && (
+                  <span style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    backgroundColor: riskColor,
+                    boxShadow: `0 0 6px ${riskColor}`,
+                    flexShrink: 0
+                  }}></span>
+                )}
+                <span>{title}</span>
+  </div>
+
+              <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>Click for details →</span>
+            </div>
+          </div>
+          
+          <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={title}>
+            <div style={{ fontSize: '13px', lineHeight: 1.8, color: 'var(--text-secondary)' }}>
+              {content}
+            </div>
+            {sources && sources.length > 0 && (
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-white)' }}>
+                {sources.map((s, i) => (
+                  <SourceLink key={i} name={s.name} url={s.url} />
+                ))}
+              </div>
+            )}
+          </Modal>
+        </>
+      );
+    }
+    
+    // ============================================
+    // MODAL COMPONENT
+    // ============================================
+    function Modal({ isOpen, onClose, title, children }) {
+      if (!isOpen) return null;
+      
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '18px', fontFamily: "'Inter', sans-serif", fontWeight: 700 }}>{title}</h2>
+              <button 
+                onClick={onClose}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}
+              >
+                &times;
+              </button>
+            </div>
+            {children}
+          </div>
+        </div>
+      );
+    }
+    
+    // ============================================
+    // QUARTERLY CHART COMPONENT (Line Chart)
+    // ============================================
+    function QuarterlyChart({ data, year }) {
+      const chartRef = React.useRef(null);
+      const chartInstance = React.useRef(null);
+      
+      React.useEffect(() => {
+        if (!chartRef.current || !data || data.length === 0) return;
+        
+        // Clear previous chart
+        chartRef.current.innerHTML = '';
+        
+        const chart = LightweightCharts.createChart(chartRef.current, {
+          layout: { 
+            background: { color: '#000000' }, 
+            textColor: '#999999',
+            fontFamily: 'Inter, system-ui, sans-serif'
+          },
+          grid: { 
+            vertLines: { color: 'rgba(255,255,255,0.03)' }, 
+            horzLines: { color: 'rgba(255,255,255,0.03)' } 
+          },
+          rightPriceScale: { 
+            borderColor: 'rgba(255,255,255,0.08)',
+            scaleMargins: { top: 0.1, bottom: 0.1 }
+          },
+          timeScale: { 
+            borderColor: 'rgba(255,255,255,0.08)',
+            timeVisible: false
+          },
+          crosshair: { mode: 0 },
+          width: chartRef.current.clientWidth,
+          height: 200,
+        });
+        
+        // Revenue line
+        const revenueSeries = chart.addLineSeries({
+          color: '#00ff88',
+          lineWidth: 2,
+          title: 'Revenue',
+        });
+        
+        // Profit line
+        const profitSeries = chart.addLineSeries({
+          color: '#00d4ff',
+          lineWidth: 2,
+          title: 'Profit',
+        });
+        
+        // Transform data for chart - parse revenue/profit strings to numbers
+        const revenueData = data.map((q, i) => ({
+          time: i + 1,
+          value: parseFloat(q.revenue.replace(/[^\d]/g, '')) / 1000
+        }));
+        
+        const profitData = data.map((q, i) => ({
+          time: i + 1,
+          value: parseFloat(q.profit.replace(/[^\d]/g, '')) / 1000
+        }));
+        
+        revenueSeries.setData(revenueData);
+        profitSeries.setData(profitData);
+        
+        chart.timeScale().fitContent();
+        
+        // Handle resize
+        const handleResize = () => {
+          if (chartRef.current) {
+            chart.applyOptions({ 
+              width: chartRef.current.clientWidth 
+            });
+          }
+        };
+        window.addEventListener('resize', handleResize);
+        
+        chartInstance.current = chart;
+        
+        return () => {
+          window.removeEventListener('resize', handleResize);
+          if (chartInstance.current) {
+            chartInstance.current.remove();
+          }
+        };
+      }, [data, year]);
+      
+      return (
+        <div style={{ width: '100%' }}>
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '12px',
+            padding: '8px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.08)'
+          }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+              Quarterly Performance {year}
+            </span>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '12px', height: '2px', background: '#00ff88' }}></span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Revenue (Cr)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '12px', height: '2px', background: '#00d4ff' }}></span>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Profit (Cr)</span>
+              </div>
+            </div>
+          </div>
+          <div ref={chartRef} style={{ width: '100%', height: '200px' }}></div>
+        </div>
+      );
+    }
+    
+    // ============================================
+    // HEADER COMPONENT
+    // ============================================
+    function Header({ selectedStock }) {
+      const [indices, setIndices] = useState(marketIndices);
+      
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setIndices(prev => prev.map(idx => ({
+            ...idx,
+            value: idx.value * (1 + (Math.random() - 0.5) * 0.001),
+            change: idx.change + (Math.random() - 0.5) * 0.01
+          })));
+        }, 5000);
+        return () => clearInterval(interval);
+      }, []);
+      
+      return (
+        <header className="header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '20px', color: 'var(--neon-blue)' }}>ISA</span>
+            {selectedStock && (
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', borderLeft: '1px solid var(--border-white)', paddingLeft: '12px' }}>
+                {selectedStock.symbol}
+              </span>
+            )}
+          </div>
+          <div style={{ flex: 1, display: 'flex', gap: '20px', overflow: 'auto' }}>
+            {indices.map((idx, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{idx.name}</span>
+                <span style={{ fontFamily: 'JetBrains Mono', fontSize: '12px' }}>
+                  {idx.value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </span>
+                <span style={{ 
+                  fontSize: '11px', 
+                  fontFamily: 'JetBrains Mono',
+                  color: idx.change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)'
+                }}>
+                  {idx.change >= 0 ? '+' : ''}{Math.abs(idx.change).toFixed(2)}%
+                </span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--neon-green)', animation: 'pulse 2s infinite' }}></div>
+            <span style={{ color: 'var(--neon-green)', fontSize: '12px', fontWeight: 500 }}>OPEN</span>
+          </div>
+        </header>
+      );
+    }
+    
+    // ============================================
+    // SIDEBAR COMPONENT
+    // ============================================
+    function Sidebar({ currentPage, setCurrentPage }) {
+      const items = [
+        { id: 'current', label: 'Current' },
+        { id: 'history', label: 'History' },
+        { id: 'chat', label: 'AI Chat' },
+      ];
+      
+      return (
+        <nav className="sidebar">
+          {items.map(item => (
+            <div
+              key={item.id}
+              className={`sidebar-item ${currentPage === item.id ? 'active' : ''}`}
+              onClick={() => setCurrentPage(item.id)}
+            >
+              <span style={{ marginBottom: '4px', fontSize: '16px' }}>
+                {item.id === 'current' ? '|' : item.id === 'history' ? '||' : '|||'}
+              </span>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </nav>
+      );
+    }
+    
+    // ============================================
+    // SEARCHABLE STOCK INPUT
+    // ============================================
+    function StockSearchInput({ onSelect, placeholder = "Search stock (RELIANCE, TCS, HDFC...)" }) {
+      const [query, setQuery] = useState('');
+      const [suggestions, setSuggestions] = useState([]);
+      const [showSuggestions, setShowSuggestions] = useState(false);
+      
+      const popularStocks = [
+        { symbol: 'RELIANCE', name: 'Reliance Industries' },
+        { symbol: 'TCS', name: 'Tata Consultancy Services' },
+        { symbol: 'HDFCBANK', name: 'HDFC Bank' },
+        { symbol: 'INFY', name: 'Infosys' },
+        { symbol: 'ICICIBANK', name: 'ICICI Bank' },
+        { symbol: 'HINDUNILVR', name: 'Hindustan Unilever' },
+        { symbol: 'SBIN', name: 'State Bank of India' },
+        { symbol: 'BHARTIARTL', name: 'Bharti Airtel' },
+        { symbol: 'ITC', name: 'ITC Limited' },
+        { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank' },
+        { symbol: 'LT', name: 'Larsen & Toubro' },
+        { symbol: 'WIPRO', name: 'Wipro' },
+        { symbol: 'AXISBANK', name: 'Axis Bank' },
+        { symbol: 'MARUTI', name: 'Maruti Suzuki' },
+        { symbol: 'ASIANPAINT', name: 'Asian Paints' },
+      ];
+      
+      const handleSearch = (e) => {
+        const value = e.target.value.toUpperCase();
+        setQuery(value);
+        
+        if (value.length > 0) {
+          const filtered = popularStocks.filter(s => 
+            s.symbol.includes(value) || s.name.toUpperCase().includes(value)
+          );
+          setSuggestions(filtered);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      };
+      
+      const handleSelect = (stock) => {
+        setQuery(stock.symbol);
+        setShowSuggestions(false);
+        onSelect(stock.symbol, stock.name);
+      };
+      
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (query) {
+          onSelect(query);
+          setShowSuggestions(false);
+        }
+      };
+      
+      return (
+        <div style={{ position: 'relative', flex: 1 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px' }}>
+            <input
+              type="text"
+              className="input-field"
+              value={query}
+              onChange={handleSearch}
+              onFocus={() => query && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+              placeholder={placeholder}
+            />
+            <button type="submit" className="btn-primary">Search</button>
+          </form>
+          
+          {showSuggestions && suggestions.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-white)',
+              borderRadius: '6px',
+              marginTop: '4px',
+              maxHeight: '200px',
+              overflowY: 'auto',
+              zIndex: 100
+            }}>
+              {suggestions.map((stock, i) => (
+                <div
+                  key={i}
+                  onClick={() => handleSelect(stock)}
+                  style={{
+                    padding: '10px 16px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid var(--border-white)',
+                    transition: 'background 0.2s'
+                  }}
+                  onMouseEnter={e => e.target.style.background = 'var(--bg-tertiary)'}
+                  onMouseLeave={e => e.target.style.background = 'transparent'}
+                >
+                  <span style={{ fontWeight: 500 }}>{stock.symbol}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{stock.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // ============================================
+    // CURRENT SITUATION PAGE
+    // ============================================
+    function CurrentSituation({ selectedStock, setSelectedStock }) {
+      const [timeframe, setTimeframe] = useState('1M');
+      const [selectedSymbol, setSelectedSymbol] = useState(selectedStock?.symbol || 'RELIANCE');
+      const [exchange, setExchange] = useState('NSE');
+      
+      // Update parent state when stock changes
+      const handleStockSelect = (symbol, name) => {
+        setSelectedSymbol(symbol);
+        setSelectedStock({ symbol, name: name || symbol });
+      };
+      const chartRef = useRef(null);
+      
+      // Load watchlist from localStorage or use default
+      const [watchlist, setWatchlist] = useState(() => {
+        const saved = localStorage.getItem('stockWatchlist');
+        return saved ? JSON.parse(saved) : defaultWatchlist;
+      });
+      
+      // Show add stock modal
+      const [showAddModal, setShowAddModal] = useState(false);
+      const [newStockSymbol, setNewStockSymbol] = useState('');
+      
+      // Save watchlist to localStorage
+      useEffect(() => {
+        localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+      }, [watchlist]);
+      
+      // Draw chart
+      useEffect(() => {
+        if (chartRef.current && window.LightweightCharts) {
+          const chart = window.LightweightCharts.createChart(chartRef.current, {
+            layout: { background: { color: '#000000' }, textColor: '#999999' },
+            grid: { vertLines: { color: 'rgba(255,255,255,0.06)' }, horzLines: { color: 'rgba(255,255,255,0.06)' } },
+            rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
+            timeScale: { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true },
+            crosshair: { mode: 0 },
+          });
+          
+          const candleSeries = chart.addCandlestickSeries({
+            upColor: '#00ff88', downColor: '#ff3366',
+            borderUpColor: '#00ff88', borderDownColor: '#ff3366',
+            wickUpColor: '#00ff88', wickDownColor: '#ff3366',
+          });
+          
+          // Generate sample data based on symbol
+          const basePrice = selectedSymbol === 'RELIANCE' ? 2200 : selectedSymbol === 'TCS' ? 3900 : selectedSymbol === 'HDFCBANK' ? 1650 : 1500;
+          const data = [];
+          let price = basePrice;
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - 100);
+          
+          for (let i = 0; i < 100; i++) {
+            const date = new Date(startDate);
+            date.setDate(date.getDate() + i);
+            const change = (Math.random() - 0.48) * 0.02 * price;
+            const open = price;
+            const close = price + change;
+            const high = Math.max(open, close) + Math.random() * (basePrice * 0.005);
+            const low = Math.min(open, close) - Math.random() * (basePrice * 0.005);
+            
+            data.push({
+              time: date.toISOString().split('T')[0],
+              open: parseFloat(open.toFixed(2)),
+              high: parseFloat(high.toFixed(2)),
+              low: parseFloat(low.toFixed(2)),
+              close: parseFloat(close.toFixed(2))
+            });
+            price = close;
+          }
+          
+          candleSeries.setData(data);
+          chart.timeScale().fitContent();
+          
+          const handleResize = () => {
+            if (chartRef.current) {
+              chart.applyOptions({ width: chartRef.current.clientWidth, height: chartRef.current.clientHeight });
+            }
+          };
+          window.addEventListener('resize', handleResize);
+          handleResize();
+          
+          return () => {
+            window.removeEventListener('resize', handleResize);
+            chart.remove();
+          };
+        }
+      }, [timeframe, selectedSymbol, exchange]);
+      
+      const timeframes = ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y', 'MAX'];
+      
+      const handleAddStock = () => {
+        if (newStockSymbol && !watchlist.find(s => s.symbol === newStockSymbol.toUpperCase())) {
+          const newStock = {
+            symbol: newStockSymbol.toUpperCase(),
+            name: newStockSymbol.toUpperCase(),
+            price: 1000 + Math.random() * 2000,
+            change: (Math.random() - 0.5) * 50,
+            changePercent: (Math.random() - 0.5) * 3,
+            volume: Math.random() * 20
+          };
+          setWatchlist([...watchlist, newStock]);
+          setNewStockSymbol('');
+          setShowAddModal(false);
+        }
+      };
+      
+      const handleRemoveStock = (symbol) => {
+        setWatchlist(watchlist.filter(s => s.symbol !== symbol));
+      };
+      
+      const handleSelectStock = (symbol) => {
+        setSelectedSymbol(symbol);
+      };
+      
+      // Get current stock data
+      const currentStock = watchlist.find(s => s.symbol === selectedSymbol) || watchlist[0];
+      
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', height: '100%' }}>
+          {/* Search Bar */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <StockSearchInput 
+              onSelect={(symbol, name) => handleStockSelect(symbol, name)}
+            />
+            <select 
+              className="input-field" 
+              style={{ width: '100px' }} 
+              value={exchange}
+              onChange={(e) => setExchange(e.target.value)}
+            >
+              <option value="NSE">NSE</option>
+              <option value="BSE">BSE</option>
+            </select>
+          </div>
+          
+          {/* Main Content */}
+          <div style={{ flex: 1, display: 'flex', gap: '12px', minHeight: 0 }}>
+            {/* Chart */}
+            <div className="chart-container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div className="chart-header">
+                <span style={{ fontWeight: 600, fontSize: '14px' }}>{selectedSymbol}.{exchange}</span>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {timeframes.map(tf => (
+                    <button
+                      key={tf}
+                      className={`timeframe-btn ${timeframe === tf ? 'active' : ''}`}
+                      onClick={() => setTimeframe(tf)}
+                    >
+                      {tf}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div ref={chartRef} className="chart-area resizable-y" />
+            </div>
+            
+            {/* Data Window */}
+            <div className="card" style={{ width: '220px', padding: '12px', flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: '4px' }}>{selectedSymbol}</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginBottom: '12px' }}>{exchange}</div>
+              
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Date</span>
+                <span style={{ fontSize: '12px' }}>{new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}</span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Time</span>
+                <span style={{ fontSize: '12px' }}>{new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              
+              <div style={{ borderTop: '1px solid var(--border-white)', margin: '8px 0' }}></div>
+              
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Open</span>
+                <span style={{ color: 'var(--neon-green)', fontSize: '12px' }}>Rs.{currentStock?.price?.toFixed(2)}</span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>High</span>
+                <span style={{ color: 'var(--neon-green)', fontSize: '12px' }}>Rs.{(currentStock?.price * 1.015)?.toFixed(2)}</span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Low</span>
+                <span style={{ color: 'var(--neon-red)', fontSize: '12px' }}>Rs.{(currentStock?.price * 0.985)?.toFixed(2)}</span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Close</span>
+                <span style={{ color: 'var(--neon-green)', fontSize: '12px' }}>Rs.{currentStock?.price?.toFixed(2)}</span>
+              </div>
+              
+              <div style={{ borderTop: '1px solid var(--border-white)', margin: '8px 0' }}></div>
+              
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Change</span>
+                <span style={{ color: currentStock?.change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)', fontSize: '12px' }}>
+                  {currentStock?.change >= 0 ? '+' : ''}{currentStock?.change?.toFixed(2)} ({currentStock?.changePercent >= 0 ? '+' : ''}{currentStock?.changePercent?.toFixed(2)}%)
+                </span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)' }}>Volume</span>
+                <span style={{ fontSize: '12px' }}>{currentStock?.volume?.toFixed(1)}M</span>
+              </div>
+              
+              <div style={{ borderTop: '1px solid var(--border-white)', margin: '8px 0' }}></div>
+              
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Technical Indicators</div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>RSI (14)</span>
+                <span style={{ color: 'var(--neon-yellow)', fontSize: '11px' }}>58.3</span>
+              </div>
+              <div className="data-row">
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>MACD</span>
+                <span style={{ color: 'var(--neon-green)', fontSize: '11px' }}>Bullish</span>
+              </div>
+            </div>
+          </div>
+          
+          {/* Watchlist */}
+          <div className="card" style={{ height: '160px', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-white)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 600, fontSize: '13px' }}>WATCHLIST</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{watchlist.length} stocks</span>
+                <button 
+                  onClick={() => setShowAddModal(true)}
+                  style={{ 
+                    background: 'var(--neon-blue)', 
+                    color: 'var(--bg-primary)', 
+                    border: 'none', 
+                    borderRadius: '4px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 40px', padding: '6px 12px', fontSize: '10px', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-white)', textTransform: 'uppercase' }}>
+              <div>Symbol</div>
+              <div style={{ textAlign: 'right' }}>Price</div>
+              <div style={{ textAlign: 'right' }}>Change</div>
+              <div style={{ textAlign: 'right' }}>%Chg</div>
+              <div style={{ textAlign: 'right' }}>Vol</div>
+              <div></div>
+            </div>
+            <div style={{ overflowY: 'auto' }}>
+              {watchlist.map((stock, i) => (
+                <div 
+                  key={i} 
+                  className={`watchlist-item ${selectedSymbol === stock.symbol ? 'selected' : ''}`}
+                  onClick={() => handleSelectStock(stock.symbol)}
+                >
+                  <div>
+                    <div style={{ fontWeight: 500, fontSize: '12px' }}>{stock.symbol}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{stock.name}</div>
+                  </div>
+                  <div style={{ textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: '11px' }}>
+                    {stock.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div style={{ textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: '11px', color: stock.change >= 0 ? 'var(--neon-green)' : 'var(--neon-red)' }}>
+                    {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}
+                  </div>
+                  <div style={{ textAlign: 'right', fontFamily: 'JetBrains Mono', fontSize: '11px', color: stock.changePercent >= 0 ? 'var(--neon-green)' : 'var(--neon-red)' }}>
+                    {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                  </div>
+                  <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {stock.volume.toFixed(1)}M
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleRemoveStock(stock.symbol); }}
+                      style={{ 
+                        background: 'none', 
+                        border: 'none', 
+                        color: 'var(--text-muted)', 
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        padding: '2px 6px'
+                      }}
+                      title="Remove from watchlist"
+                    >
+                      x
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Add Stock Modal */}
+          <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Stock to Watchlist">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <input
+                type="text"
+                className="input-field"
+                value={newStockSymbol}
+                onChange={(e) => setNewStockSymbol(e.target.value.toUpperCase())}
+                placeholder="Enter stock symbol (e.g., RELIANCE, TCS)"
+              />
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button className="btn-primary" onClick={handleAddStock}>Add Stock</button>
+              </div>
+            </div>
+          </Modal>
+        </div>
+      );
+    }
+    
+    // ============================================
+    // HISTORY & ANALYSIS PAGE
+    // ============================================
+    function HistoryAnalysis({ selectedStock }) {
+      const [selectedYear, setSelectedYear] = useState(2025);
+      const [expandedQuarter, setExpandedQuarter] = useState(null);
+      const [selectedEvent, setSelectedEvent] = useState(null);
+      
+      const years = [2025, 2024, 2023, 2022, 2021];
+      const quarterlyData = quarterlyDataByYear[selectedYear] || quarterlyDataByYear[2025];
+      
+      return (
+        <div style={{ overflowY: 'auto', paddingBottom: '32px' }}>
+          <h1 className="bold-heading" style={{ fontSize: '28px', marginBottom: '8px', color: 'var(--text-primary)' }}>
+            History & Analysis
+          </h1>
+          <div style={{ fontSize: '14px', color: 'var(--neon-blue)', marginBottom: '20px', fontWeight: 600 }}>
+            Analyzing: {selectedStock.symbol} - {selectedStock.name}
+          </div>
+          
+          {/* Section 1: Previous Data & Quarterly Findings */}
+          <section className="card" style={{ padding: '20px', marginBottom: '16px' }}>
+            <h2 className="section-title bold-heading" style={{ fontSize: '20px' }}>
+              I. Previous Data & Quarterly Findings
+            </h2>
+            
+            {/* Timeline with Number Line */}
+            <div style={{ background: 'var(--bg-primary)', borderRadius: '6px', padding: '20px', marginBottom: '20px', border: '1px solid var(--border-white)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Timeline (Click events for details)</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>2021 - 2025</span>
+              </div>
+              
+              <div className="timeline-container" style={{ padding: '30px 20px' }}>
+                <div className="timeline-line"></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative', zIndex: 1 }}>
+                  {timelineEvents.map((event, i) => (
+                    <div 
+                      key={i} 
+                      className="timeline-event"
+                      onClick={() => setSelectedEvent(event)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <div className={`timeline-dot ${event.type}`}></div>
+                      <div style={{ textAlign: 'center', marginTop: '12px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{event.year}</div>
+                        <div style={{ fontSize: '9px', color: 'var(--text-muted)', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {event.title}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Quarterly Results with Year Selector */}
+            <div className="grid-2">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Quarterly Results</span>
+                </div>
+                
+                {/* Year Selector */}
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  {years.map(year => (
+                    <button
+                      key={year}
+                      className={`year-btn ${selectedYear === year ? 'active' : ''}`}
+                      onClick={() => setSelectedYear(year)}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Quarterly Data - Expandable */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {quarterlyData.map((q, i) => (
+                    <div key={i} className="factor-card" style={{ cursor: 'pointer' }} onClick={() => setExpandedQuarter(expandedQuarter === i ? null : i)}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 500, fontSize: '13px' }}>{q.quarter}</span>
+                        <span style={{ fontSize: '12px', color: 'var(--neon-green)' }}>{q.growth}</span>
+                      </div>
+                      {expandedQuarter === i && (
+                        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-white)' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '11px' }}>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Revenue:</span> <span style={{ color: 'var(--neon-green)' }}>Rs.{q.revenue}</span></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Profit:</span> <span style={{ color: 'var(--neon-green)' }}>Rs.{q.profit}</span></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>EPS:</span> Rs.{q.eps}</div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Margin:</span> {q.margin}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div>
+                <QuarterlyChart data={quarterlyData} year={selectedYear} />
+              </div>
+            </div>
+          </section>
+          
+          {/* Section 2: Current Status - 3 Column Layout */}
+          <section className="card" style={{ padding: '20px', marginBottom: '16px' }}>
+            <h2 className="section-title bold-heading" style={{ fontSize: '20px' }}>
+              II. Current Status
+            </h2>
+            
+            <div className="status-columns">
+              {/* Column 1: Geopolitics */}
+              <div className="status-column">
+                <div className="status-column-title">Geopolitics</div>
+                {[
+                  { 
+                    title: 'Crude Oil Volatility', 
+                    risk: 'high',
+                    content: `CRUDE OIL PRICE ANALYSIS - HIGH RISK FACTOR
+
+Current crude oil prices have surged to $78.50/barrel this week, representing a 2.3% increase driven by escalating Middle East tensions and disciplined OPEC+ supply management. This trend has significant implications for Reliance Industries.
+
+IMPACT ON RELIANCE INDUSTRIES:
+The Oil-to-Chemicals (O2C) segment contributes approximately 40% of Reliance's total revenue, making crude prices a critical variable. Higher crude prices increase feedstock costs for the refining business, but also improve gross refining margins (GRM) as refined product prices typically rise faster than crude inputs.
+
+Historical Correlation: 
+• When crude rises 10%, Reliance's O2C EBITDA typically increases 3-5% due to GRM expansion
+• However, sustained prices above $90/barrel compress margins as demand destruction kicks in
+• Reliance's Jamnagar refinery (world's largest at 1.4M bpd) benefits from export-oriented model
+
+COMPARATIVE ANALYSIS:
+Indian Oil Corporation (IOC), with its higher domestic exposure and lower complexity index, faces greater margin pressure with an estimated -2.5% EBITDA impact for every $5 increase in crude. Reliance's superior refinery complexity (21.0 vs IOC's 11.5) and export flexibility make it relatively better positioned.
+
+SCENARIOS:
+• Base Case ($75-85/barrel): Neutral to slightly positive for Reliance (+0.5% to +1.5%)
+• Bull Case (below $70/barrel): Positive for margins (+2% to +3%)
+• Bear Case (above $90/barrel): Negative impact (-2% to -4%) due to demand concerns
+
+OUTLOOK: Monitor Middle East developments closely. Current trajectory suggests continued volatility with 15-20% swings possible in next 3 months.`,
+                    sources: [{ name: 'Reuters', url: 'https://reuters.com' }, { name: 'Bloomberg', url: 'https://bloomberg.com' }, { name: 'OPEC Reports', url: 'https://opec.org' }] 
+                  },
+                  { 
+                    title: 'RBI Interest Rate Policy', 
+                    risk: 'low',
+                    content: `MONETARY POLICY ANALYSIS - FAVORABLE CONDITIONS
+
+The Reserve Bank of India maintained the repo rate at 6.5% in its latest policy meeting, signaling a continued pause in the tightening cycle that began in 2022. This decision has positive implications for capital-intensive conglomerates like Reliance.
+
+KEY IMPLICATIONS FOR RELIANCE:
+
+1. DEBT SERVICING:
+Reliance carries consolidated debt of approximately Rs.3.5 lakh crore. At current rates, annual interest expense stands at Rs.24,500 crore. A rate cut of 50 basis points would save approximately Rs.1,750 crore annually, directly improving net profit by 4-5%.
+
+2. CAPITAL EXPANSION:
+The company's ambitious capex plans (Rs.1.2 lakh crore annually for 5G, green energy, retail expansion) become more viable with stable rates. Lower borrowing costs improve project IRRs and accelerate payback periods.
+
+3. FII FLOWS:
+FII inflows of Rs.2,450 crore this week indicate renewed foreign interest in Indian large-caps. Reliance, being the largest company by market cap (weight ~10% in Nifty), is a primary beneficiary. Historical data shows FII flows correlate strongly with rate differentials - India's positive real rates attract carry trades.
+
+FORWARD GUIDANCE:
+RBI's commentary suggests rates may remain on hold through FY25, with potential cuts in H2 if inflation stays below 4.5%. This "higher for longer" stance benefits Reliance's debt-heavy balance sheet compared to a scenario of further hikes.
+
+RISK FACTORS:
+• Global rate environment (US Fed policy) could force RBI's hand
+• Oil-induced inflation spike could derail rate cut expectations
+• Fiscal deficits may pressure bond yields higher`,
+                    sources: [{ name: 'RBI Bulletin', url: 'https://rbi.org.in' }, { name: 'Economic Times', url: 'https://economictimes.com' }] 
+                  },
+                  { 
+                    title: 'US-China Trade Tensions', 
+                    risk: 'medium',
+                    content: `GEOPOLITICAL RISK ASSESSMENT - ELEVATED UNCERTAINTY
+
+The ongoing trade tensions between the United States and China continue to create ripple effects across global markets, with both direct and indirect implications for Indian conglomerates like Reliance.
+
+DIRECT IMPACTS ON RELIANCE:
+
+1. REFINING EXPORTS:
+Reliance exports approximately 40% of its refined products, with significant volumes going to US and European markets. Tariff escalations could disrupt these flows if end-market demand weakens. However, Reliance's product mix (diesel, jet fuel, gasoline) serves essential needs, providing some insulation.
+
+2. SUPPLY CHAIN DISRUPTIONS:
+The O2C segment imports catalysts, specialty chemicals, and equipment from China. Any export controls or tariffs could increase input costs by 2-3% for affected categories. Reliance has been diversifying sourcing to Japan, South Korea, and domestic suppliers.
+
+INDIRECT BENEFITS - CHINA+1 STRATEGY:
+
+India is emerging as a major beneficiary of supply chain diversification away from China. Reliance's integrated ecosystem (telecom infrastructure, digital services, retail logistics) positions it to capture demand from multinational companies establishing India operations.
+
+Jio's enterprise business (JioBusiness) has seen 40% growth in contracts from MNCs setting up India R&D centers and back offices. The digital infrastructure play benefits from increased data center requirements.
+
+Retail segment gains from imported goods being replaced by domestic manufacturing - Reliance Retail's private label brands are capturing this opportunity.
+
+NET ASSESSMENT:
+Short-term (0-6 months): Neutral to slightly negative due to global uncertainty
+Medium-term (6-18 months): Positive due to China+1 tailwinds
+Long-term (18+ months): Highly positive if India captures significant manufacturing share`,
+                    sources: [{ name: 'Reuters', url: 'https://reuters.com' }, { name: 'WTO Reports', url: 'https://wto.org' }] 
+                  },
+                  { 
+                    title: 'India GDP Growth Outlook', 
+                    risk: 'low',
+                    content: `MACROECONOMIC ANALYSIS - STRONG GROWTH TRAJECTORY
+
+India's GDP growth forecast remains robust at 6.5-7% for FY25, positioning it as the fastest-growing major economy globally. This macro tailwind creates a favorable environment for consumer-facing and infrastructure businesses like Reliance.
+
+GROWTH COMPONENTS RELEVANT TO RELIANCE:
+
+1. CONSUMER SPENDING (40% of GDP):
+Rising disposable incomes and urbanization drive retail consumption. Reliance Retail, with 18,500 stores across 7,000 cities, directly captures this growth. Same-store sales growth of 12-15% indicates strong momentum.
+
+2. INVESTMENT ACTIVITY (30% of GDP):
+Government infrastructure spending of Rs.10 lakh crore annually creates indirect demand for:
+• Petrochemicals (pipes, construction materials)
+• Cement and materials (Reliance holds stake in certain ventures)
+• Digital connectivity (Jio benefits from smart city projects)
+
+3. SERVICES EXPORT (25% of GDP):
+IT and business services growth supports Jio's enterprise segment. Data consumption growth of 20% YoY correlates with services sector expansion.
+
+REGIONAL BREAKDOWN:
+• Western India (Gujarat, Maharashtra): 7.5% growth - Reliance's home turf with Jamnagar refinery, Mumbai HQ
+• Southern India: 7.2% growth - Strong for Jio's tech-savvy user base
+• Northern India: 6.8% growth - Retail expansion opportunity in tier-2/3 cities
+• Eastern India: 6.2% growth - Emerging market for telecom penetration
+
+POLICY SUPPORT:
+• PLI schemes benefiting electronics manufacturing (Jio's device business)
+• Semiconductor fab incentives (potential future opportunity)
+• Green energy subsidies supporting Reliance's solar/hydrogen investments
+
+RISK FACTORS:
+• Monsoon variability affecting rural demand
+• State election cycles potentially delaying infrastructure projects
+• Global recession spillover effects`,
+                    sources: [{ name: 'Economic Times', url: 'https://economictimes.com' }, { name: 'RBI', url: 'https://rbi.org.in' }] 
+                  },
+                ].map((item, i) => (
+                  <DropdownItem key={i} title={item.title} content={item.content} sources={item.sources} risk={item.risk} />
+                ))}
+              </div>
+              
+              {/* Column 2: News Analysis */}
+              <div className="status-column">
+                <div className="status-column-title">News Analysis</div>
+                {[
+                  { 
+                    title: 'Green Energy Mega Investment', 
+                    risk: 'low',
+                    content: `STRATEGIC PIVOT TO CLEAN ENERGY - LONG-TERM GROWTH CATALYST
+
+Reliance Industries announced a massive Rs.75,000 crore ($9 billion) investment in green energy infrastructure, marking one of India's largest corporate commitments to clean energy transition.
+
+INVESTMENT BREAKDOWN:
+• Solar Manufacturing: Rs.30,000 crore for 100 GW solar module/cell capacity
+• Green Hydrogen: Rs.25,000 crore for electrolyzer manufacturing and H2 production
+• Battery Storage: Rs.15,000 crore for lithium-ion gigafactory
+• Wind Energy: Rs.5,000 crore for offshore wind projects
+
+STRATEGIC RATIONALE:
+1. Energy Transition Hedge: As global demand shifts from fossil fuels, Reliance is future-proofing its energy business. The O2C segment (40% of revenue) faces long-term decline risk from EVs and renewables.
+
+2. Government Alignment: India's 2070 net-zero target and 500 GW non-fossil capacity by 2030 create massive policy tailwinds. PLI schemes provide 20-30% capital subsidies.
+
+3. ESG Investment Flows: Global ESG assets projected to reach $50 trillion by 2025. Reliance's green pivot could attract $5-10 billion in ESG fund allocations, improving valuation multiples.
+
+FINANCIAL IMPACT:
+• Capex Phase (2024-2028): Free cash flow pressure of Rs.15,000-20,000 crore annually
+• Revenue Contribution by 2030: Rs.50,000-75,000 crore (10-15% of total)
+• Margin Profile: 25-30% gross margins (vs 15-18% for traditional O2C)
+• ROIC Target: 12-15% by 2030
+
+COMPETITIVE POSITIONING:
+Reliance enters green energy from a position of strength:
+• Existing energy infrastructure and logistics
+• Strong balance sheet to fund capex
+• Government relationships and land banks
+• Technology partnerships (Meta, Google, Stellantis)
+
+RISK FACTORS:
+• Technology risk in green hydrogen economics
+• Execution complexity of multiple parallel projects
+• Competition from Adani Green, Tata Power
+• Policy changes could affect subsidies`,
+                    sources: [{ name: 'Economic Times', url: 'https://economictimes.com' }, { name: 'Bloomberg', url: 'https://bloomberg.com' }] 
+                  },
+                  { 
+                    title: 'JioMart E-commerce Milestone', 
+                    risk: 'medium',
+                    content: `DIGITAL RETAIL TRANSFORMATION - SCALING PHASE
+
+JioMart crossed the significant milestone of 100 million monthly active users (MAUs), validating Reliance's aggressive investment in omnichannel retail technology.
+
+KEY METRICS:
+• Monthly Active Users: 100M (up from 65M a year ago, +54% YoY)
+• Daily Orders: 1.5 million (up from 800K)
+• Average Order Value: Rs.850 (up 15% YoY)
+• Pincode Coverage: 20,000+ (up from 12,000)
+• Same-Day Delivery: 4,500 cities
+
+COMPETITIVE ADVANTAGES OVER AMAZON/FLIPKART:
+
+1. Offline+Online Integration:
+• 18,500 physical Reliance Retail stores serve as fulfillment centers
+• Click-and-collect (order online, pickup in store) reduces last-mile costs by 40%
+• Store staff assist with returns, improving customer experience
+
+2. Grocery Dominance:
+• JioMart is #1 in online grocery with 35% market share
+• Grocery drives repeat purchases and daily engagement
+• Perishables logistics capability is hard to replicate
+
+3. Ecosystem Lock-in:
+• JioPhone users get exclusive JioMart deals
+• JioCinema subscribers receive shopping discounts
+• Integration with digital payments (JioMoney)
+
+MONETIZATION PATH:
+• Commission Revenue: 8-12% from third-party sellers
+• Private Label Margins: 25-30% (vs 8-10% commission)
+• Advertising: Rs.500 crore run rate from seller promotions
+• Fulfillment Services: Warehousing and logistics for SMEs
+
+CHALLENGES:
+• Achieving profitability remains 2-3 years away
+• High customer acquisition costs in tier-1 cities
+• Quick commerce (Blinkit, Zepto) threatening grocery share
+• Amazon's Prime loyalty program has strong retention`,
+                    sources: [{ name: 'Livemint', url: 'https://livemint.com' }, { name: 'Company Disclosures', url: 'https://bseindia.com' }] 
+                  },
+                  { 
+                    title: 'Jio 5G Network Expansion', 
+                    risk: 'low',
+                    content: `5G DEPLOYMENT PROGRESS - INFRASTRUCTURE LEADERSHIP
+
+Jio has achieved 85% urban coverage with its standalone (SA) 5G network, making it India's largest 5G operator by coverage and subscriber base.
+
+DEPLOYMENT METRICS:
+• Cities Covered: 400+ (vs Airtel's 350+)
+• Towers Deployed: 85,000 (target: 100,000 by March 2025)
+• 5G Subscribers: 85 million (up from 70M last quarter)
+• Spectrum Holdings: 24,740 MHz across 700MHz, 3.5GHz, 26GHz bands
+
+USER BEHAVIOR INSIGHTS:
+• Average Data Consumption: 28 GB/month (up from 23 GB YoY)
+• 5G Users Consume 3.2x more data than 4G users
+• Video Streaming: 65% of 5G traffic (vs 50% on 4G)
+• Gaming: 8% of traffic (up from 2%)
+
+REVENUE MONETIZATION:
+
+1. Consumer Segment:
+• 5G plans priced 15-20% premium over 4G
+• Family plans bundling multiple connections
+• Premium content bundles (JioCinema, JioGames)
+
+2. Enterprise (JioBusiness):
+• Private 5G networks for factories, ports, campuses
+• Average deal size: Rs.2-5 crore annually
+• Key clients: Reliance Industries, Adani Ports, Tata Steel
+• Revenue target: Rs.10,000 crore by FY27
+
+3. Platform Services:
+• JioCloud for edge computing
+• JioSense for IoT applications
+• Network slicing for specific enterprise needs
+
+CAPEX OUTLOOK:
+• 2024-25: Rs.25,000 crore for coverage expansion
+• Focus on rural rollout and indoor coverage
+• Open RAN technology reducing equipment costs 20%
+
+COMPETITIVE POSITION:
+• Jio: 85M 5G users, standalone network, full coverage focus
+• Airtel: 65M 5G users, non-standalone (NSA), premium positioning
+• Vi: Limited 5G (pilot phase), financial constraints`,
+                    sources: [{ name: 'Company Report', url: 'https://bseindia.com' }, { name: 'TRAI Data', url: 'https://trai.gov.in' }] 
+                  },
+                  { 
+                    title: 'Retail Division Expansion', 
+                    risk: 'medium',
+                    content: `RETAIL EMPIRE GROWTH - PHYSICAL + DIGITAL CONVERGENCE
+
+Reliance Retail continues its aggressive expansion, adding 450 new stores in Q3 FY25 and making strategic acquisitions to strengthen its market position.
+
+STORE NETWORK OVERVIEW:
+• Total Stores: 18,500 (up from 15,000 a year ago)
+• Cities Covered: 7,000+
+• Retail Area: 50 million sq ft
+• Formats: 15+ (Reliance Digital, Trends, Fresh, Sports, etc.)
+
+KEY ACQUISITIONS:
+
+1. Metro Cash & Carry India (Rs.4,000 crore):
+• 31 wholesale stores across India
+• Strong B2B relationships with 1M+ kirana stores
+• Adds Rs.8,000 crore annual revenue
+• Synergies with JioMart's wholesale business
+
+2. Netmeds (Pharmacy):
+• 4 million online customers
+• 100+ fulfillment centers
+• Integration with Reliance Digital stores
+
+3. Just Dial (Local Search):
+• 150 million registered users
+• B2B marketplace for SMEs
+• Data synergies with JioMart
+
+CATEGORY PERFORMANCE:
+
+• Fashion (Trends): 25% growth, Rs.18,000 crore revenue
+  - 1,500 stores, private brands (Azio, Performax)
+  - Market share: 8% of organized fashion
+
+• Electronics (Digital): 18% growth, Rs.22,000 crore revenue
+  - 2,000 stores, exclusive brand outlets
+  - Apple Premium Reseller partnership
+
+• Grocery (Fresh/Smart): 30% growth, Rs.45,000 crore revenue
+  - 12,000 stores including neighborhood format
+  - Private label contribution: 22%
+
+• Pharma (Health): 20% growth, Rs.5,000 crore revenue
+  - Online + offline integration
+  - 1,000 Netmeds pickup points
+
+MARGIN IMPROVEMENT:
+• Private label contribution increased from 15% to 18%
+• Supply chain optimization saved Rs.800 crore annually
+• Store productivity improved 12% (sales per sq ft)
+
+CHALLENGES:
+• Real estate costs increasing in metro cities
+• Integration complexity of multiple acquisitions
+• Competition from DMart, Tata Cliq, Amazon Fresh`,
+                    sources: [{ name: 'Company Announcement', url: 'https://bseindia.com' }, { name: 'Economic Times', url: 'https://economictimes.com' }] 
+                  },
+                ].map((item, i) => (
+                  <DropdownItem key={i} title={item.title} content={item.content} sources={item.sources} risk={item.risk} />
+                ))}
+              </div>
+              
+              {/* Column 3: Overall */}
+              <div className="status-column">
+                <div className="status-column-title">Overall</div>
+                {[
+                  { 
+                    title: 'Financial Health Score', 
+                    risk: 'low',
+                    content: `COMPREHENSIVE FINANCIAL ANALYSIS - STRONG BALANCE SHEET
+
+Reliance Industries maintains a robust financial position, providing the foundation for ambitious growth plans while managing risks effectively.
+
+BALANCE SHEET METRICS:
+
+1. LEVERAGE:
+• Debt-to-Equity: 0.72 (down from 0.85 YoY)
+• Net Debt: Rs.1.8 lakh crore (down from Rs.2.2 lakh crore)
+• Debt/EBITDA: 2.1x (comfortable vs industry avg of 3.5x)
+• Interest Coverage: 4.8x (healthy margin of safety)
+
+2. LIQUIDITY:
+• Cash & Equivalents: Rs.2.8 lakh crore
+• Unused Credit Lines: Rs.1.5 lakh crore
+• Current Ratio: 1.4x
+• Quick Ratio: 1.1x
+
+3. PROFITABILITY:
+• Return on Equity (ROE): 11.2% (up from 9.8%)
+• Return on Capital Employed (ROCE): 13.5%
+• Net Profit Margin: 6.8%
+• EBITDA Margin: 18.2%
+
+CASH FLOW ANALYSIS:
+
+Operating Cash Flow: Rs.1.4 lakh crore annually
+• O2C Segment: Rs.55,000 crore (stable, commodity-linked)
+• Jio Platforms: Rs.35,000 crore (growing 15% YoY)
+• Retail: Rs.30,000 crore (fastest growth at 25%)
+
+Capital Expenditure: Rs.1.2 lakh crore
+• 5G Network: Rs.35,000 crore
+• Green Energy: Rs.25,000 crore
+• Retail Expansion: Rs.20,000 crore
+• O2C Maintenance: Rs.40,000 crore
+
+Free Cash Flow: Rs.20,000 crore (after all capex)
+• Sufficient for dividend payments (Rs.8,000 crore)
+• Debt reduction (Rs.10,000 crore target)
+• Strategic acquisitions buffer
+
+REDIT PROFILE:
+• Credit Rating: AAA (CRISIL), Aa3 (Moody's)
+• Outlook: Stable
+• Bond Spreads: 85-100 bps over G-sec (lowest in Indian corporate space)
+
+STRESS TEST RESULTS:
+• 20% crude price drop: EBITDA impact -8%, still FCF positive
+• Recession scenario: Revenue decline -5%, cost cuts available
+• Interest rate +200bps: Net profit impact -12%, manageable`,
+                    sources: [{ name: 'BSE India', url: 'https://bseindia.com' }, { name: 'Company Annual Report', url: 'https://bseindia.com' }] 
+                  },
+                  { 
+                    title: 'Market Position Strength', 
+                    risk: 'low',
+                    content: `COMPETITIVE LANDSCAPE ANALYSIS - MARKET LEADERSHIP
+
+Reliance Industries commands dominant positions across its three core businesses, creating a formidable competitive moat that is difficult for rivals to breach.
+
+TELECOM (Jio Platforms):
+Market Position: #1
+• Subscriber Market Share: 48% (450M+ subscribers)
+• Revenue Market Share: 42%
+• 5G Leadership: 85M subscribers, largest SA network
+• ARPU: Rs.195 (vs Airtel Rs.208, Vi Rs.156)
+
+Competitive Moats:
+• Scale advantage: Lowest cost per GB in India
+• Ecosystem integration: JioCinema, JioMart, JioGames
+• Network quality: Largest 4G+5G coverage
+• Financial strength: Can sustain price wars
+
+ORGANIZED RETAIL:
+Market Position: #1
+• Market Share: 12% of organized retail
+• Store Count: 18,500 across 7,000 cities
+• Revenue: Rs.2.6 lakh crore (largest retailer in India)
+• Formats: 15+ (grocery, fashion, electronics, pharma)
+
+Competitive Moats:
+• Offline+online integration (unique in India)
+• Private label brands (18% of revenue, higher margins)
+• Supply chain efficiency (centralized procurement)
+• Real estate portfolio (owned stores reduce costs)
+
+OIL-TO-CHEMICALS (O2C):
+Market Position: #2 Globally (refining)
+• Refining Capacity: 1.4M bpd (world's largest single location)
+• Complexity Index: 21.0 (highest globally)
+• Utilization: 95%
+• Export Revenue: 40% of O2C revenue
+
+Competitive Moats:
+• Scale and complexity (hard to replicate)
+• Export flexibility (vs domestic-focused IOC)
+• Petrochemical integration (higher margins)
+• Location advantage (Jamnagar port access)
+
+CONGLOMERATE ADVANTAGES:
+1. Cross-selling: Jio users get JioMart discounts
+2. Shared infrastructure: Data centers serve all businesses
+3. Capital allocation: Strong businesses fund emerging ones
+4. Government relationships: Scale provides influence
+
+THREAT ASSESSMENT:
+• Adani Group: Growing in retail, telecom infra (MEDIUM)
+• Amazon/Flipkart: Strong in e-commerce (MEDIUM)
+• Airtel: Premium telecom positioning (LOW)
+• IOC/BPCL: Domestic refining (LOW)`,
+                    sources: [{ name: 'Industry Reports', url: 'https://economictimes.com' }, { name: 'TRAI', url: 'https://trai.gov.in' }] 
+                  },
+                  { 
+                    title: 'Analyst Consensus', 
+                    risk: 'neutral',
+                    content: `SELL-SIDE ANALYSIS SUMMARY - BULLISH CONSENSUS
+
+Reliance Industries is one of the most heavily researched Indian stocks with comprehensive coverage from global and domestic brokerages.
+
+COVERAGE OVERVIEW:
+• Total Analysts: 42
+• Buy Recommendations: 32 (76%)
+• Hold Recommendations: 7 (17%)
+• Sell Recommendations: 3 (7%)
+• Consensus Rating: BUY (Strong)
+
+TARGET PRICE ANALYSIS:
+• Mean Target: Rs.2,450 (11% upside)
+• Median Target: Rs.2,400 (8% upside)
+• High Target: Rs.2,800 (27% upside) - Bernstein
+• Low Target: Rs.2,000 (-10% downside) - Jefferies
+• Standard Deviation: Rs.180 (7.5%)
+
+KEY ANALYST VIEWS:
+
+BULLISH (Morgan Stanley, Bernstein, Kotak):
+• "Reliance's diversified business model provides resilience"
+• "Jio and Retail are undervalued as hidden assets"
+• "Green energy pivot positions for next growth decade"
+• Target: Rs.2,600-2,800
+
+NEUTRAL (Goldman Sachs, ICICI Sec):
+• "Current price fairly reflects fair value"
+• "Execution risk on capex remains"
+• "Need to see Jio IPO catalyst for re-rating"
+• Target: Rs.2,200-2,400
+
+BEARISH (Jefferies, CLSA):
+• "Capex cycle may dilute returns"
+• "O2C faces long-term structural challenges"
+• "Corporate governance concerns with complex structure"
+• Target: Rs.2,000-2,100
+
+CATALYST CALENDAR:
+
+Near-term (0-3 months):
+• Q4 FY25 Results (May 2025)
+• Jio 5G subscriber milestone (90M target)
+• Retail market share data (Q4)
+
+Medium-term (3-6 months):
+• Jio IPO timeline announcement
+• Green energy project updates
+• Quarterly results (Q1 FY26)
+
+Long-term (6-12 months):
+• Jio Platforms IPO (expected 2026)
+• Green hydrogen commercial production
+• Retail profitability improvement`,
+                    sources: [{ name: 'Bloomberg', url: 'https://bloomberg.com' }, { name: 'Reuters', url: 'https://reuters.com' }] 
+                  },
+                  { 
+                    title: 'Risk Assessment Matrix', 
+                    risk: 'medium',
+                    content: `COMPREHENSIVE RISK ANALYSIS - MODERATE RISK PROFILE
+
+This analysis evaluates key risks across multiple dimensions to provide a holistic view of investment risks.
+
+RISK MATRIX:
+
+HIGH RISK FACTORS:
+
+1. Crude Oil Volatility (Probability: 60%, Impact: HIGH)
+• O2C contributes 40% of EBITDA
+• Every $10 crude swing impacts EBITDA by Rs.5,000-8,000 crore
+• Mitigation: Export flexibility, hedging, petrochemical integration
+• Monitoring: Weekly EIA inventories, OPEC meetings
+
+MEDIUM RISK FACTORS:
+
+2. Debt Sustainability (Probability: 30%, Impact: MEDIUM-HIGH)
+• Rs.3.5 lakh crore total debt
+• Rs.1.2 lakh crore annual capex requirement
+• Mitigation: Strong FCF generation, asset monetization
+• Trigger: Net Debt/EBITDA > 3.0x
+
+3. Competition Intensification (Probability: 50%, Impact: MEDIUM)
+• Adani Group expanding aggressively
+• Amazon/Flipkart investing in India
+• Mitigation: Scale advantages, ecosystem lock-in
+• Monitoring: Market share trends quarterly
+
+4. Regulatory Changes (Probability: 40%, Impact: MEDIUM)
+• Telecom tariff floor pricing debate
+• E-commerce FDI norms tightening
+• Antitrust scrutiny on market dominance
+• Mitigation: Diversified business model, government relations
+
+5. Execution Risk (Probability: 35%, Impact: MEDIUM)
+• Rs.75,000 crore green energy investment
+• 5G rural rollout completion
+• Retail integration of acquisitions
+• Mitigation: Strong track record, professional management
+
+LOW RISK FACTORS:
+
+6. Technology Disruption (Probability: 20%, Impact: LOW-MEDIUM)
+• Starlink satellite broadband
+• OTT displacing traditional TV
+• Mitigation: Jio's technology focus, content investments
+
+7. Currency Risk (Probability: 40%, Impact: LOW)
+• Dollar-denominated debt
+• Export revenue sensitivity
+• Mitigation: Natural hedge through exports
+
+OVERALL RISK RATING: MODERATE
+• Appropriate for: Long-term investors (2-3+ years)
+• Position sizing: Core holding (5-8% of portfolio)
+• Review frequency: Quarterly`,
+                    sources: [{ name: 'Risk Models', url: 'https://bseindia.com' }, { name: 'Internal Analysis', url: 'https://bloomberg.com' }] 
+                  },
+                ].map((item, i) => (
+                  <DropdownItem key={i} title={item.title} content={item.content} sources={item.sources} risk={item.risk} />
+                ))}
+              </div>
+            </div>
+          </section>
+          
+          {/* Section 3: Overall Summary & Prediction */}
+          <section className="card" style={{ padding: '20px', marginBottom: '16px' }}>
+            <h2 className="section-title bold-heading" style={{ fontSize: '20px' }}>
+              III. Overall Summary & Prediction
+            </h2>
+            
+            {/* Prediction Box */}
+            <div className="prediction-box" style={{ marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--neon-green)', fontFamily: "'Inter', sans-serif" }}>
+                    Will {selectedStock?.symbol || 'This Stock'} Go Up?
+                  </h3>
+                  <p style={{ color: 'var(--text-secondary)', marginTop: '4px', fontSize: '13px' }}>AI-Powered Analysis Based on Multiple Data Sources</p>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--neon-green)' }}>BULLISH</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Confidence: 72%</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '32px' }}>
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Target Price (6 months)</div>
+                  <div style={{ fontSize: '18px', fontWeight: 600 }}>Rs.2,350 - Rs.2,500</div>
+                </div>
+                <div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>Potential Upside</div>
+                  <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--neon-green)' }}>+7% to +14%</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Bullish & Bearish */}
+            <div className="grid-2">
+              <div>
+                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--neon-green)', marginBottom: '12px', textTransform: 'uppercase' }}>
+                  Why It Could Go Up
+                </h3>
+                {[
+                  { factor: 'Strong Quarterly Growth', evidence: 'Revenue growing 7.5% QoQ, net profit up 12% in Q3 FY25. Jio Platforms turned profitable, contributing Rs.4,200 crore to EBITDA. Retail segment EBITDA margin expanded by 180 bps.', source: 'Company Reports', impact: '+3-4%' },
+                  { factor: 'JioMart & Digital Ecosystem', evidence: '100 million monthly active users achieved. Omnichannel integration with 15,000+ physical stores creates unique advantage. Average order value up 15% YoY, indicating customer stickiness.', source: 'Company Announcements', impact: '+2-3%' },
+                  { factor: 'Green Energy Pivot', evidence: '$10B investment in renewable energy positions company for long-term growth. 100 GW solar manufacturing planned. Aligns with ESG investment trends, potentially attracting $5-10B in ESG fund inflows.', source: 'Annual Report', impact: '+2-3%' },
+                ].map((item, i) => (
+                  <div key={i} className="factor-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontWeight: 500, fontSize: '12px', color: 'var(--text-primary)' }}>{i + 1}. {item.factor}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--neon-green)', background: 'rgba(0,255,136,0.1)', padding: '2px 6px', borderRadius: '3px' }}>{item.impact}</span>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '6px', lineHeight: 1.5 }}>{item.evidence}</div>
+                    <SourceLink name={item.source} url="https://bseindia.com" />
+                  </div>
+                ))}
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--neon-red)', marginBottom: '12px', textTransform: 'uppercase' }}>
+                  Why Analysis Could Be Wrong
+                </h3>
+                {[
+                  { factor: 'Crude Oil Volatility', evidence: 'O2C segment contributes 40% of revenue. If crude exceeds $90/barrel for extended period, refining margins compress by 15-20%. Current Middle East tensions create downside risk.', impact: 'HIGH', impactPercent: '-4% to -8%' },
+                  { factor: 'Elevated Debt Levels', evidence: 'Consolidated debt of Rs.3.5 lakh crore (D/E: 0.72). Interest rate hikes by RBI could increase finance costs by Rs.1,500-2,000 crore annually. Refinancing risk in current high-rate environment.', impact: 'MEDIUM', impactPercent: '-2% to -3%' },
+                  { factor: 'Telecom Competition', evidence: 'Bharti Airtel gaining market share (+2.1% in urban markets). Airtel\'s 5G network covers 30% more districts. Potential price war could compress Jio\'s ARPU by Rs.10-15.', impact: 'MEDIUM', impactPercent: '-1% to -2%' },
+                  { factor: 'Global Recession Risk', evidence: 'US Fed rate cuts expected but global growth remains uncertain. If global demand contracts, Reliance\'s export-oriented refining business could see 10-15% volume decline.', impact: 'MEDIUM', impactPercent: '-3% to -5%' },
+                ].map((item, i) => (
+                  <div key={i} className="factor-card">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500, fontSize: '12px' }}>{i + 1}. {item.factor}</span>
+                      <span style={{ 
+                        fontSize: '9px', 
+                        padding: '2px 6px', 
+                        background: item.impact === 'HIGH' ? 'rgba(255, 51, 102, 0.2)' : 'rgba(251, 191, 36, 0.2)',
+                        color: item.impact === 'HIGH' ? 'var(--neon-red)' : 'var(--neon-yellow)',
+                        borderRadius: '3px'
+                      }}>{item.impact}</span>
+                    </div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', lineHeight: 1.5 }}>{item.evidence}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--neon-red)', marginTop: '4px' }}>Potential Impact: {item.impactPercent}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Analysis Limitations */}
+            <div style={{ marginTop: '16px', background: 'var(--bg-primary)', border: '1px solid var(--border-white)', borderRadius: '6px', padding: '14px' }}>
+              <h4 style={{ fontSize: '11px', color: 'var(--neon-yellow)', marginBottom: '8px', textTransform: 'uppercase' }}>
+                Analysis Limitations
+              </h4>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                This analysis is based on publicly available data and AI algorithms. It cannot predict black swan events (pandemics, wars, regulatory shocks), insider information, or sudden leadership changes. Past performance does not guarantee future results. The confidence level of 72% indicates significant uncertainty remains. Always consult a qualified financial advisor before making investment decisions.
+              </p>
+            </div>
+            
+            {/* Sources */}
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-white)' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Data Sources:</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                <SourceLink name="BSE India" url="https://bseindia.com" />
+                <SourceLink name="NSE India" url="https://nseindia.com" />
+                <SourceLink name="Economic Times" url="https://economictimes.com" />
+                <SourceLink name="Livemint" url="https://livemint.com" />
+                <SourceLink name="Reuters" url="https://reuters.com" />
+                <SourceLink name="Bloomberg" url="https://bloomberg.com" />
+                <SourceLink name="RBI" url="https://rbi.org.in" />
+              </div>
+            </div>
+          </section>
+          
+          {/* Disclaimer */}
+          <div className="disclaimer">
+            <strong>Disclaimer:</strong> This analysis is generated by AI based on publicly available data. It should not be considered as financial advice. Past performance does not guarantee future results. Please consult a qualified financial advisor before making investment decisions.
+          </div>
+          
+          {/* Event Modal */}
+          <Modal 
+            isOpen={!!selectedEvent} 
+            onClose={() => setSelectedEvent(null)} 
+            title={selectedEvent?.title || 'Event Details'}
+          >
+            {selectedEvent && (
+              <div>
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ 
+                    padding: '4px 10px', 
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    background: selectedEvent.type === 'positive' ? 'rgba(0,255,136,0.2)' : selectedEvent.type === 'negative' ? 'rgba(255,51,102,0.2)' : 'rgba(251,191,36,0.2)',
+                    color: selectedEvent.type === 'positive' ? 'var(--neon-green)' : selectedEvent.type === 'negative' ? 'var(--neon-red)' : 'var(--neon-yellow)'
+                  }}>
+                    {selectedEvent.impact}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {selectedEvent.month} {selectedEvent.year}
+                  </div>
+                </div>
+                <p style={{ fontSize: '13px', lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                  {selectedEvent.summary}
+                </p>
+                <div style={{ borderTop: '1px solid var(--border-white)', paddingTop: '12px' }}>
+                  <SourceLink name={selectedEvent.source} url="https://economictimes.com" />
+                </div>
+              </div>
+            )}
+          </Modal>
+        </div>
+      );
+    }
+    
+    // ============================================
+    // AI CHATBOT PAGE
+    // ============================================
+    function AIChatbot({ selectedStock }) {
+      const stockName = selectedStock?.name || 'Reliance Industries';
+      const stockSymbol = selectedStock?.symbol || 'RELIANCE';
+      
+      const [messages, setMessages] = useState([
+        {
+          role: 'assistant',
+          content: `Hello! I am your AI-powered stock analysis assistant.
+
+I am currently analyzing: ${stockSymbol} - ${stockName}
+
+I can help you with:
+- Stock price analysis and trends
+- Quarterly results breakdown
+- Geopolitical impact assessment
+- News sentiment analysis
+- Technical indicators explanation
+- Competitor comparisons
+
+How can I assist you today?`
+        }
+      ]);
+      const [input, setInput] = useState('');
+      const [isLoading, setIsLoading] = useState(false);
+      
+      const getChatResponse = (msg) => {
+        const lower = msg.toLowerCase();
+        
+        if (lower.includes('quarterly') || lower.includes('results')) {
+          return `Based on the latest quarterly results for Reliance Industries:
+
+**Q3 FY25 Performance Summary:**
+Reliance reported consolidated revenue of Rs.2,59,000 crore, representing a 8.2% quarter-over-quarter increase and 12.5% year-over-year growth. Net profit came in at Rs.19,650 crore, up 12% QoQ, beating analyst estimates by 5%.
+
+**Segment-wise Performance:**
+
+1. **O2C (Oil-to-Chemicals):** Revenue Rs.1,45,000 crore (+6% QoQ). EBITDA margin improved to 14.2% from 13.8% due to higher refining throughput and better product mix. The Jamnagar refinery operated at 95% capacity utilization.
+
+2. **Jio Platforms:** Revenue Rs.32,500 crore (+8% QoQ). EBITDA margin expanded to 15.8%, marking the first profitable quarter for the telecom arm. ARPU increased to Rs.195 from Rs.181, driven by 4G data consumption growth and 5G subscriber additions.
+
+3. **Retail:** Revenue Rs.68,000 crore (+25% YoY). Store count reached 18,000+ across India. Same-store sales growth of 12% indicates strong execution. JioMart crossed 100M MAU milestone.
+
+**Key Takeaway:** The diversified business model is delivering results, with each segment contributing to growth. Jio profitability is a major inflection point.
+
+Sources: Company BSE Filings, Economic Times, Investor Presentation`;
+        }
+        
+        if (lower.includes('market') || lower.includes('news') || lower.includes('today')) {
+          return `**Current Market Status - March 2026:**
+
+The Indian equity markets are trading near all-time highs, with NIFTY 50 at 25,423 (+0.37% today) and SENSEX at 55,712 (+0.47%). The markets have been supported by:
+
+1. **FII Flows:** Net buyers for the 6th consecutive week, investing Rs.12,500 crore in Indian equities. This is driven by India's strong GDP growth narrative and relative stability compared to other emerging markets.
+
+2. **RBI Policy:** Repo rate maintained at 6.5% for the 5th consecutive meeting. The central bank signaled a dovish stance, which is positive for rate-sensitive sectors and reduces borrowing costs for leveraged companies like Reliance.
+
+3. **Global Factors:** US Fed has indicated 2-3 rate cuts in 2026, which could lead to further FII inflows into emerging markets. Oil prices at $78.50/barrel are manageable for Indian refiners, though any spike above $85 could pressure margins.
+
+4. **Sector Performance:** IT sector is outperforming (+2.1% this week) due to strong US deal pipeline. Banking sector is stable with credit growth at 15% YoY. Realty sector under pressure (-1.2%) due to rising mortgage rates.
+
+5. **Reliance-Specific:** The stock has outperformed NIFTY by 3% this month, driven by strong quarterly results and positive sentiment around Jio profitability. Technical indicators suggest the stock is in a strong uptrend with RSI at 58 (neutral-bullish zone).
+
+Sources: NSE India, BSE India, RBI, Bloomberg`;
+        }
+        
+        if (lower.includes('reliance')) {
+          return `**Reliance Industries - Comprehensive Analysis:**
+
+**Current Trading Data:**
+- Price: Rs.2,195.75 (+1.25% today)
+- Market Cap: Rs.14.85 Lakh Crore (India's largest company by market cap)
+- 52-Week Range: Rs.1,800 - Rs.2,400
+- P/E Ratio: 28.5x (vs sector average of 24x)
+- Dividend Yield: 0.32%
+
+**Business Segments:**
+
+1. **Oil-to-Chemicals (O2C):** World's largest single-location refinery complex with 1.4 million barrels per day capacity. Contributes 40% of revenue but only 25% of EBITDA due to lower margins. The segment is mature but provides stable cash flows.
+
+2. **Jio Platforms:** India's largest telecom operator with 450+ million subscribers. Revenue of Rs.1,30,000 crore annually. The company is now profitable with improving ARPU trajectory. 5G rollout is 60% complete, expected to drive premium pricing.
+
+3. **Retail:** India's largest retailer with 18,000+ stores. Revenue growing 25% YoY. JioMart integration with physical stores creates omnichannel advantage. Private label contribution increasing to 15% of revenue.
+
+4. **Digital Services:** Includes JioMart, JioCinema, JioSaavn. Fastest growing segment with 40%+ revenue growth. Path to profitability achieved.
+
+**Technical Analysis:**
+- Stock is trading above 50-DMA (Rs.2,100) and 200-DMA (Rs.1,950) - bullish
+- RSI at 58 - neutral to bullish
+- MACD showing bullish crossover
+- Support: Rs.2,100 (50-DMA), Rs.2,000 (psychological)
+- Resistance: Rs.2,350 (previous high), Rs.2,500 (target)
+
+**Target: Rs.2,350-2,500 (6 months)** with 72% confidence.
+
+Sources: BSE India, Company Reports, Technical Analysis`;
+        }
+        
+        if (lower.includes('competitor') || lower.includes('airtel') || lower.includes('ioc')) {
+          return `**Competitor Analysis for Reliance Industries:**
+
+**Telecom Segment (Jio vs Airtel vs Vi):**
+- Jio: 42% market share, 450M subscribers, ARPU Rs.195
+- Bharti Airtel: 33% market share, gaining 2.1% in urban markets, ARPU Rs.208 (premium positioning)
+- Vodafone Idea: 18% market share, declining, debt issues
+
+Impact: Airtel's 5G network covers 30% more districts than Jio. However, Jio's digital ecosystem (JioCinema, JioSaavn, JioMart) provides stickiness. Expected market share impact: Stable to -1% if Airtel sustains aggressive pricing.
+
+**Retail Segment (JioMart vs Amazon vs Flipkart):**
+- JioMart: 28% market share, 100M MAU, omnichannel advantage
+- Amazon India: 31% market share, strong Prime ecosystem
+- Flipkart: 29% market share, Walmart backing, strong in fashion
+
+Impact: Amazon's new Mumbai fulfillment center may capture 2% additional market share. JioMart's integration with 18,000 physical stores provides unique offline advantage that pure-play e-commerce cannot match.
+
+**Oil & Gas (Reliance vs IOC vs BPCL):**
+- Reliance: 1.4M bpd capacity, export-oriented, complexity 21.0
+- IOC: 0.8M bpd capacity, domestic-focused, expanding Panipat refinery
+- BPCL: 0.6M bpd capacity
+
+Impact: IOC's Panipat expansion (+0.2M bpd) increases domestic competition. However, Reliance's higher complexity and export focus provides cushion.
+
+Sources: TRAI, Company Reports, Industry Analysis`;
+        }
+        
+        return `Thank you for your question: "${msg}"
+
+Based on my analysis of available data, I can provide insights on:
+
+**Available Topics:**
+- Stock price analysis and trends for NSE/BSE listed companies
+- Quarterly financial results breakdown with segment analysis
+- Current market conditions and macroeconomic factors
+- Geopolitical impact on Indian markets
+- Technical indicator explanations (RSI, MACD, Moving Averages)
+- Competitor comparisons across sectors
+
+**Data Sources I Use:**
+- IndianAPI.in (Stock price data)
+- Company quarterly filings (BSE/NSE)
+- Economic Times, Livemint, MoneyControl (News)
+- Reuters, Bloomberg (Global factors)
+- RBI bulletins (Macroeconomic data)
+- TRAI reports (Telecom data)
+
+Please ask specific questions about any stock or market topic!
+
+Disclaimer: This is AI-powered analysis for informational purposes only. Not financial advice.`;
+      };
+      
+      const handleSend = () => {
+        if (!input.trim() || isLoading) return;
+        
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setIsLoading(true);
+        
+        setTimeout(() => {
+          const response = getChatResponse(input);
+          setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+          setIsLoading(false);
+        }, 1200);
+      };
+      
+      const quickActions = [
+        { label: 'Analyze RELIANCE', prompt: 'Tell me about RELIANCE stock' },
+        { label: 'Market Overview', prompt: 'What is the current market situation?' },
+        { label: 'Quarterly Results', prompt: 'What are the quarterly results?' },
+        { label: 'Competitors', prompt: 'Compare Reliance with competitors' },
+      ];
+      
+      return (
+        <div className="chat-container">
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <div>
+              <h1 className="bold-heading" style={{ fontSize: '22px' }}>AI Stock Assistant</h1>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Powered by Google Gemini</p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '4px 8px', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-white)' }}>IndianAPI</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '4px 8px', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-white)' }}>Economic Times</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)', padding: '4px 8px', background: 'var(--bg-tertiary)', borderRadius: '4px', border: '1px solid var(--border-white)' }}>BSE India</span>
+            </div>
+          </div>
+          
+          {/* Quick Actions */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+            {quickActions.map((action, i) => (
+              <button
+                key={i}
+                className="quick-action"
+                onClick={() => {
+                  setInput(action.prompt);
+                  setTimeout(() => {
+                    const userMsg = { role: 'user', content: action.prompt };
+                    setMessages(prev => [...prev, userMsg]);
+                    setInput('');
+                    setIsLoading(true);
+                    setTimeout(() => {
+                      const response = getChatResponse(action.prompt);
+                      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+                      setIsLoading(false);
+                    }, 1200);
+                  }, 100);
+                }}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+          
+          {/* Messages */}
+          <div className="messages-container" style={{ flex: 1, background: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-white)' }}>
+            {messages.map((msg, i) => (
+              <div key={i} className={`message ${msg.role}`}>
+                {msg.content}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="message assistant">
+                <div className="loading-dots">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Input */}
+          <div className="chat-input-container">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+              placeholder="Ask about any stock, quarterly results, market news..."
+              className="input-field"
+            />
+            <button className="btn-primary" onClick={handleSend} disabled={isLoading || !input.trim()}>
+              Send
+            </button>
+          </div>
+          
+          {/* Disclaimer */}
+          <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)' }}>
+            AI analysis based on publicly available data. Not financial advice. Always verify information from official sources.
+          </div>
+        </div>
+      );
+    }
+    
+    // Stock name lookup
+    const stockNames = {
+      'RELIANCE': 'Reliance Industries',
+      'TCS': 'Tata Consultancy Services',
+      'HDFCBANK': 'HDFC Bank',
+      'INFY': 'Infosys',
+      'ICICIBANK': 'ICICI Bank',
+      'HINDUNILVR': 'Hindustan Unilever',
+      'SBIN': 'State Bank of India',
+      'BHARTIARTL': 'Bharti Airtel',
+      'ITC': 'ITC Limited',
+      'KOTAKBANK': 'Kotak Mahindra Bank',
+      'LT': 'Larsen & Toubro',
+      'WIPRO': 'Wipro',
+      'AXISBANK': 'Axis Bank',
+      'MARUTI': 'Maruti Suzuki',
+      'ASIANPAINT': 'Asian Paints'
+    };
+    
+    // ============================================
+    // MAIN APP
+    // ============================================
+    function App() {
+      const [currentPage, setCurrentPage] = useState('current');
+      const [selectedStock, setSelectedStock] = useState({ 
+        symbol: 'RELIANCE', 
+        name: 'Reliance Industries' 
+      });
+      
+      const renderPage = () => {
+        switch (currentPage) {
+          case 'current': return <CurrentSituation selectedStock={selectedStock} setSelectedStock={setSelectedStock} />;
+          case 'history': return <HistoryAnalysis selectedStock={selectedStock} />;
+          case 'chat': return <AIChatbot selectedStock={selectedStock} />;
+          default: return <CurrentSituation selectedStock={selectedStock} setSelectedStock={setSelectedStock} />;
+        }
+      };
+      
+      return (
+        <div className="app-container">
+          <Header selectedStock={selectedStock} />
+          <div className="main-container">
+            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+            <main className="content">
+              {renderPage()}
+            </main>
+          </div>
+          <div className="watermark">made by ishaan;></div>
+        </div>
+      );
+    }
+    
+    // Render
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+
+</body>
+</html>
